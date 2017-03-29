@@ -1,4 +1,4 @@
-import web4
+import web
 import socketserver
 PORT = 8000
 
@@ -6,7 +6,7 @@ PORT = 8000
 ###WEB SERVER
 
 # creacion estandar de un server
-Handler = web4.testHTTPRequestHandler
+Handler = web.testHTTPRequestHandler
 
 httpd = socketserver.TCPServer(("", PORT), Handler)
 print("serving at port", PORT)

@@ -43,9 +43,9 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler): #enlaza al sok
 		for event in events ['results']:
 			company+=[event['companynumb']]
 		return company
-	def get_event(self):
+	def get_event(self,limit):
 		conn = http.client.HTTPSConnection(self.OPENFDA_API_URL)
-		conn.request("GET", self.OPENFDA_API_EVENT + "?limit=10")
+		conn.request("GET", self.OPENFDA_API_EVENT + "?limit="+limit+"")
 		r1 = conn.getresponse()
 		print (r1.status, r1.reason)
 		data1 = r1.read()
@@ -57,6 +57,27 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler): #enlaza al sok
 		for event in events ['results']:
 			medicamento+=[event['patient']['drug'][0]["medicinalproduct"]]
 		return medicamento
+	def gender_list(self,events):
+		gender=[]
+		for event in events ['results']:
+			gender+=[event['patient']['patientsex']]
+		return gender
+	
+	def gender_page(self,gender):
+		s=''
+		for type_gender in gender:
+			s +="<li>"+type_gender+"</li>"
+		html="""
+		<html>
+			<head><title>OPEN FDA COOL</title></head>
+				<body>
+					<h1>Gender </h1>
+					<ol>
+						%s
+					</ol>
+				</body>
+			</html>""" %(s)
+		return html 
 				
 	def drug_page(self,medicamento):
 		s=''
@@ -84,30 +105,50 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler): #enlaza al sok
 			</head>
 			<body>
 				<h1>OpenFDA Client</h1>
-				<form method= "get" action="receive">
+				<form method= "get" action="listDrugs">
+					
+					<input type = "submit" value="Drug List: Send to OpenFDA">
 					</input>
-					<input type = "submit" value="OpenFDA">
-					</input>
+				
+					Limit:<input type='text' name='limit'></input>
 				</form>
 				
-				<form method="get" action="search">
-					<input type='text' name='drug'></input>
+				<form method="get" action="searchDrug">
 					<input type="submit" value="Drug Search ">
+					<input type='text' name='drug'></input>
+					
 				</form>
 				
-				<form method= "get" action="receive_company">
+				<form method= "get" action="listCompanies">
+					
+					<input type = "submit" value="Company list: Send to OpenFDA">
 					</input>
-					<input type = "submit" value="Company">
-					</input>
+					Limit:<input type='text' name='limit'></input>
 				</form>
 				
-				<form method="get" action="search_company">
-					<input type='text' name='company'></input>
+				<form method="get" action="searchCompany">
 					<input type="submit" value="Company Search ">
+					<input type='text' name='company'></input>
+					
+				</form>
+				
+				<form method="get" action="listGender">
+					<input type="submit" value="Gender Search ">
+					Limit:<input type='text' name='gender'></input>
+					
 				</form>
 			</body>
         </html>
         """
+		return html
+	def errorhtml(self):
+		html="""
+			<html>
+			<head><title>ERROR</title></head>
+				<body>
+					<h1>ERROR 404 </h1>
+				</body>
+			</html>"""
 		return html
 		
 	def do_GET(self):
@@ -116,60 +157,81 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler): #enlaza al sok
 		is_search=False
 		is_event_company=False
 		is_search_company=False
+		is_search_gender=False
+		
 		if self.path == "/":
 			main_page=True
-		elif self.path=="/receive?":
+		elif "/listDrugs" in self.path:
 			is_event=True
-		elif '/search?' in self.path:
+			url=self.path
+			url_lista=url.split('=')
+			limit=url_lista[1]
+		elif '/searchDrug' in self.path:
 			is_search=True
 			url=self.path
 			url_lista=url.split('=')
 			drug=url_lista[1]
-		elif self.path =='/receive_company?':
+		elif '/listCompanies' in self.path:
 			is_event_company=True
-		elif '/search_company?' in self.path:
+			url=self.path
+			url_lista=url.split('=')
+			limit=url_lista[1]
+		elif '/searchCompany' in self.path:
 			is_search_company=True
 			url=self.path
 			url_lista=url.split('=')
 			company=url_lista[1]
+		elif '/listGender' in self.path:
+			is_search_gender=True
+			url=self.path
+			url_lista=url.split('=')
+			gender=url_lista[1]
+			
+			
         # Send response status code
-		self.send_response(200)
+		
 
-        # Send headers
-		self.send_header('Content-type','text/html')
-		self.end_headers()
-
-		html=self.get_main_page()
+		
         # Send message back to client
         #message = "Hello world! " + self.path
 
 
         # Write content as utf-8 data
 		if main_page :
-			self.wfile.write(bytes(html, "utf8"))
+			html=self.get_main_page()
+			self.send_response(200)
 		elif is_event :
 			
-			event = self.get_event()
+			event = self.get_event(limit)
 			cc=self.drug_list(event)
 			html= self.drug_page(cc)
-			self.wfile.write(bytes(html, "utf8"))
+			self.send_response(200)
 		elif is_search :
 			drugs=self.get_search(drug)
 			cc=self.companynumb(drugs)
 			html=self.drug_page(cc)
-			self.wfile.write(bytes(html,"utf8"))
+			self.send_response(200)
 		elif is_event_company :
-			event = self.get_event()
+			event = self.get_event(limit)
 			company=self.companynumb(event)
 			html=self.drug_page(company)
-			self.wfile.write(bytes(html,"utf8"))
+			self.send_response(200)
 		elif is_search_company :
 			companys=self.get_search_company(company)
 			cc=self.company(companys)
 			html=self.drug_page(cc)
-			self.wfile.write(bytes(html,"utf8"))
-			
-		
+			self.send_response(200)
+		elif is_search_gender :
+			event = self.get_event(gender)
+			cc= self.gender_list(event)
+			html= self.gender_page(cc)
+			self.send_response(200)
+		else:
+			html=self.errorhtml()
+			self.send_response(404)
+		self.send_header('Content-type','text/html')
+		self.end_headers()
+		self.wfile.write(bytes(html,"utf8"))
 		return
 	
 #Copyright [2017] [David Viar Hernandez]
@@ -180,5 +242,13 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler): #enlaza al sok
 
 #	http://www.apache.org/licenses/LICENSE-2.0
 
+#Unless required by applicable law or agreed to in writing, software
+#distributed under the License is distributed on an "AS IS" BASIS,
+#WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#See the License for the specific language governing permissions and
+#limitations under the License.		
+
 		
+		
+### GET EVENT		
 
