@@ -77,7 +77,7 @@ class OpenFDAHTML():
 		<html>
 			<head><title>OPEN FDA COOL</title></head>
 				<body>
-					<h1><u> Gender </u></h1>"""
+					<h1><u><font color="#58D3F7"> Gender </font></u></h1>"""
 		html +=		counter
 		html +=			"""<ol>
 						%s
@@ -151,6 +151,9 @@ class OpenFDAHTML():
 					Limit:<input type='text' size='5' name='gender'></input>
 					
 				</form>
+				
+			
+				
 			</body>
         </html>
         """
@@ -170,16 +173,19 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 		client=OpenFDAClient()
 		paser=OpenFDAParser()
 		Html=OpenFDAHTML()
+	
 		if self.path == "/":
 			html=Html.get_main_page()
 			self.send_response(200)
-		
+			self.send_header('Content-type','text/html')
+	
 		elif "/listDrugs" in self.path:
 			limit=self.path.split('=')[1]
 			events = client.get_events(limit)
 			drugs=paser.get_listDrugs(events)
 			html= Html.get_list('Drugs',drugs)
 			self.send_response(200)
+			self.send_header('Content-type','text/html')
 		
 		elif '/searchDrug' in self.path:
 			drug=self.path.split('=')[1]
@@ -187,20 +193,23 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 			companies=paser.get_listCompanies(events)
 			html=Html.get_list(drug,companies)
 			self.send_response(200)
-		
+			self.send_header('Content-type','text/html')
+	
 		elif '/listCompanies' in self.path:
 			limit=self.path.split('=')[1]
 			event = client.get_events(limit)
 			companies=paser.get_listCompanies(event)
 			html=Html.get_list('Companies',companies)
 			self.send_response(200)
-		
+			self.send_header('Content-type','text/html')
+	
 		elif '/searchCompany' in self.path:
 			company=self.path.split('=')[1]
 			events=client.get_search('company',company)
 			drugs=paser.get_listDrugs(events)
 			html=Html.get_list(company,drugs)
 			self.send_response(200)
+			self.send_header('Content-type','text/html')
 		
 		elif '/listGender' in self.path:
 			gender=self.path.split('=')[1]
@@ -208,12 +217,22 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 			gender= paser.get_listGender(events)
 			html= Html.gender_page(gender)
 			self.send_response(200)
+			self.send_header('Content-type','text/html')
+	
+		elif self.path=='/secret':
+			
+			self.send_response(401)
+			self.send_header('WWW-Authenticate: Basic realm="My Realm"','text/html')
 		
+		elif self.path=='/redirect':
+			self.send_response(302)
+			self.send_header('Location','http://localhost:8000')
 		else:
 			html=Html.errorhtml()
 			self.send_response(404)
+			self.send_header('Content-type','text/html')
 		
-		self.send_header('Content-type','text/html')
+		
 		self.end_headers()
 		self.wfile.write(bytes(html,"utf8"))
 		
